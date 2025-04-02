@@ -1,0 +1,100 @@
+name: Build and Push .NET App to AWS ECR
+
+on:
+  push:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REPOSITORY: 528757828730.dkr.ecr.ap-south-1.amazonaws.com/mywebapp
+
+jobs:
+  test:
+    name: Run Tests & Code Quality Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0'
+
+      - name: Restore Dependencies
+        run: dotnet restore src/MyWebApp
+
+      - name: Run Unit Tests
+        run: dotnet test src/MyWebApp --no-restore --verbosity normal
+  security:
+    name: Security & Linting
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials  
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+        
+      - name: Authenticate to AWS ECR
+        run: |
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPOSITORY
+
+      - name: Run Security Scan (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.ECR_REPOSITORY }}:latest
+          format: 'table'
+          exit-code: 0  # Change to 1 if you want it to fail on security issues
+  build:
+    name: Build & Push Docker Image to AWS ECR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPOSITORY
+
+      - name: Build and Push Docker Images (Latest + Unique Tag)
+        run: |
+          IMAGE_TAG=$(date +%s)  # Generate a timestamp-based tag
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV  # Save it for later use
+          
+          # Build and push with both tags
+          docker build -t $ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REPOSITORY:latest -f src/MyWebApp/Dockerfile .
+          docker push $ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REPOSITORY:latest
+  # notify:
+  #   name: Send Build Notification
+  #   runs-on: ubuntu-latest
+  #   needs: build  # Runs only if the 'build' job succeeds
+  #   steps:
+  #     - name: Send Email
+  #       uses: dawidd6/action-send-mail@v3
+  #       with:
+  #         server_address: smtp.gmail.com
+  #         server_port: 587
+  #         username: ${{ secrets.EMAIL_USERNAME }}
+  #         password: ${{ secrets.EMAIL_PASSWORD }}
+  #         subject: " Build & Deployment Successful!"
+  #         body: "The .NET application has been successfully built and pushed to AWS ECR."
+  #         to: your-email@gmail.com
+  #         from: "GitHub Actions <your-email@gmail.com>"
+
