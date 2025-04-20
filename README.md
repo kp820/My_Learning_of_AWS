@@ -3,19 +3,19 @@
 ### 1. Infrastructure Management & Monitoring
   ### Daily Cloud Resource Monitoring:
 
-     Check AWS CloudWatch dashboards for resource health (EC2, RDS, Lambda, S3, etc.).
+  Check AWS CloudWatch dashboards for resource health (EC2, RDS, Lambda, S3, etc.).
 
-     Monitor auto-scaling groups, load balancers, and EKS/ECS clusters.
+  Monitor auto-scaling groups, load balancers, and EKS/ECS clusters.
 
-     Troubleshoot Performance Issues:
+  Troubleshoot Performance Issues:
 
-     Resolve latency, downtime, or misconfigured services (e.g., Route 53, API Gateway).
+  Resolve latency, downtime, or misconfigured services (e.g., Route 53, API Gateway).
 
-     Manage Multi-Account/Region Deployments:
+  Manage Multi-Account/Region Deployments:
 
-     Use AWS Organizations and Control Tower for governance.
+  Use AWS Organizations and Control Tower for governance.
 
-     Ensure consistency across global regions (e.g., us-east-1, ap-southeast-1).
+  Ensure consistency across global regions (e.g., us-east-1, ap-southeast-1).
 
 ### 2. Automation & DevOps
      Infrastructure as Code (IaC):
